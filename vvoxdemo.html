@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html><head><title>VVOX</title><script>
+var acx = new (typeof AudioContext !== "undefined" && AudioContext !== null ? AudioContext : webkitAudioContext);
+navigator.getUserMedia=navigator.getUserMedia||navigator.webkitGetUserMedia||navigator.mozGetUserMedia||navigator.msGetUserMedia;
+window.app={};
+var masterGain = acx.createGain();var bufferSize = 4096;masterGain.gain.value = 1;masterGain.connect(acx.destination);
+//RGB CMY
+app.FRQ=[130.813,261.626,523.251,1046.50,2093,4186.01,2093,1046.50,523.251,261.626,130.813];
+app.init=function(){app.video=document.querySelector('video');app.canvas=document.querySelector('#canvas');app.context=app.canvas.getContext('2d');
+	app.tune(4186.01);app.fps=5;app.ramp=false;};
+app.tune=function(v){app.FRQ[5]=v;
+	app.FRQ[4]=app.FRQ[5]/2;app.FRQ[6]=app.FRQ[4];
+	app.FRQ[3]=app.FRQ[4]/2;app.FRQ[7]=app.FRQ[3];
+	app.FRQ[2]=app.FRQ[3]/2;app.FRQ[8]=app.FRQ[2];
+	app.FRQ[1]=app.FRQ[2]/2;app.FRQ[9]=app.FRQ[1];
+	app.FRQ[0]=app.FRQ[1]/2;app.FRQ[10]=app.FRQ[0];};
+app.start=function(){app.init();
+	//	alert("I primi sono " + app.primes.length + '.\n !!!indagare su come mai wolfram alpha ne da 2267 non ritorna per esempio 22037 - in compenso e chiedergli "is 20037 prime?" lui risponde di si!!!.')
+	var constraints = { audio: false, video: true };
+	navigator.mediaDevices.getUserMedia(constraints)
+	.then(function(stream){app.video.srcObject = stream;
+		app.video.onloadedmetadata=function(e){app.video.play();};
+	}).catch(function(err) { console.log(err.name + ": " + err.message); });
+		setTimeout(app.startplay,1000);};
+app.startv=function(v){app.init();var s=document.createElement('source');
+    video.pause();s.setAttribute('src', v); 
+	video.appendChild(s);video.load();video.volume=0;video.play();	
+	setTimeout(app.startplay,1000);};
+app.startplay=function(){var now = acx.currentTime;app.vox=[]
+	for(var f=0;f<11;f++){app.vox[f]={};	
+		app.vox[f].g= acx.createGain();app.vox[f].g.connect(masterGain);
+		app.vox[f].o=acx.createOscillator();
+		app.vox[f].o.type='sine';
+		app.vox[f].o.start(now);
+		app.vox[f].o.frequency.setValueAtTime(app.FRQ[f], now);
+		app.vox[f].o.connect(app.vox[f].g);
+		app.vox[f].g.gain.setValueAtTime(0, now);}
+	app.cycle=setInterval(app.frame,1000/app.fps);
+};
+app.frame=function(){app.context.drawImage(video, 0, 0, 15, 11);
+    var dd = new Uint8Array(app.context.getImageData(0, 0,15,11).data.buffer);
+	var tmp;var maxavg=0;var maxavgx=0;var c=0;var rx;var cx;
+	var maxavgx=0;
+	for(var r=0;r<11;r++){rx=r*15*4;maxavg=0;
+		for(c=0;c<15;c++){cx=rx+(c*4);
+			tmp=(dd[cx]+dd[cx+1]+dd[cx+2])/3;
+			if(tmp>maxavg){maxavg=tmp;maxavgx=c};
+		}tmp=Math.floor(Math.abs(maxavgx-7));
+		console.log(maxavg);
+		//WESTERN SCALE --- XX - 9/8 - 5/4 - 4/3 - 3/2 - 5/3 - 15/8 - 2/1
+		var half=app.FRQ[r]/2;		
+			if(tmp==0){tmp=half*2}
+		else if(tmp==1){tmp=(half/8)*15}
+		else if(tmp==2){tmp=(half/3)*5}
+		else if(tmp==3){tmp=(half/2)*3}
+		else if(tmp==4){tmp=(half/3)*4}
+		else if(tmp==5){tmp=(half/4)*5}
+		else if(tmp==6){tmp=(half/8)*9}
+		else if(tmp==7){tmp=half}
+		var now = acx.currentTime;
+		app.vox[r].g.gain.linearRampToValueAtTime((maxavg/255)/2, now+((1000/(app.fps+5))/1000));
+		if(app.ramp){app.vox[r].o.frequency.linearRampToValueAtTime(tmp/2, now+((1000/(app.fps+1))/1000));}
+		else{app.vox[r].o.frequency.setValueAtTime(tmp/2, now);}
+}	};
+app.setfps=function(fps){app.fps=fps;if(app.cycle){clearInterval(app.cycle);app.cycle=setInterval(app.frame,1000/fps);}};
+</script><style>html,body{width:100%;height:100%;margin:0;padding:0;text-align:center;overflow:hidden}button,input{font-size:36px}
+td{height:2px;width:2px;border:1px solid grey}</style></head><body><div style="width:100%;text-align:center;position:absolute;z-index:1">
+<button onclick="app.start();">CAMERA</button> <button onclick="app.startv('moviex.mov');">VIDEO1</button> <button onclick="app.startv('a.mp4');return false;">VIDEO2</button> <button onclick="app.startv('b.mp4');return false;">VIDEO3</button><br/>
+<!--<button onclick="if(app.pib.style.display=='none'){app.pib.style.display==''}else{app.pib.style.display='none'}">DISPLAY ON/OFF</button>-->
+<input type="number" id="fps" value="5"  min="0" max="100" onchange="app.setfps(this.value)"/> <button onclick="var e=document.getElementById('fps');var v=e.value-1;if(v<0){v=0};e.value=v;app.setfps(v)">SLOWER</button> <button onclick="var e=document.getElementById('fps');var v=e.value+1;if(v>100){v=100};e.value=v;app.setfps(v);">FASTER</button> <button onclick="app.ramp=!app.ramp;">RAMP ON/OFF</button><br/>
+<button onclick="app.tune(4186);">C</button>
+<button onclick="app.tune(4434.913);">C#/Db</button>
+<button onclick="app.tune(4698.626);">D</button>
+<button onclick="app.tune(4978.021);">D#/Eb</button>
+<button onclick="app.tune(5274.030);">E</button>
+<button onclick="app.tune(5587.640);">F</button>
+<button onclick="app.tune(5919.898);">F#/Gb</button>
+<button onclick="app.tune(6271.913);">G</button>
+<button onclick="app.tune(6644.861);">G#Ab</button>
+<button onclick="app.tune(7039.985);">A</button>
+<button onclick="app.tune(7458.604);">A#/Bb</button>
+<button onclick="app.tune(7902.116);">B</button></div>
+<video id="video" style="width:100%;position:absolute;z-index:0;top:0;left:0;"></video><br/><canvas
+	id="canvas" width="15" height="11" style="display:none"></canvas>
+</body></html>
