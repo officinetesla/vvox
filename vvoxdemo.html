@@ -3,17 +3,24 @@
 var acx = new (typeof AudioContext !== "undefined" && AudioContext !== null ? AudioContext : webkitAudioContext);
 navigator.getUserMedia=navigator.getUserMedia||navigator.webkitGetUserMedia||navigator.mozGetUserMedia||navigator.msGetUserMedia;
 var masterGain = acx.createGain();var bufferSize = 4096;masterGain.gain.value = 1;masterGain.connect(acx.destination);
-window.app={};
+window.app={ramp:false,invert:false,wb:false,wf:'sine',tuned:4186.01,fps:5};
 app.init=function(){app.video=document.querySelector('video');app.canvas=document.querySelector('#canvas');app.context=app.canvas.getContext('2d');
-	app.tune(4186.01);app.fps=5;app.ramp=false;app.invert=false;};
-app.tune=function(v){app.FRQ=[];app.FRQ[5]=v;app.FRQ[4]=app.FRQ[5]/2;app.FRQ[6]=app.FRQ[4];app.FRQ[3]=app.FRQ[4]/2;app.FRQ[7]=app.FRQ[3];app.FRQ[2]=app.FRQ[3]/2;app.FRQ[8]=app.FRQ[2];app.FRQ[1]=app.FRQ[2]/2;app.FRQ[9]=app.FRQ[1];app.FRQ[0]=app.FRQ[1]/2;app.FRQ[10]=app.FRQ[0];};
+	app.tune(app.tuned);};
+app.tune=function(v){if(app.invert){app.tuneINV(v)}else{app.tuneSTR(v)}}
+app.tuneSTR=function(v){app.tuned=v;app.FRQ=[];app.FRQ[5]=v;app.FRQ[4]=app.FRQ[5]/2;app.FRQ[6]=app.FRQ[4];app.FRQ[3]=app.FRQ[4]/2;app.FRQ[7]=app.FRQ[3];app.FRQ[2]=app.FRQ[3]/2;app.FRQ[8]=app.FRQ[2];app.FRQ[1]=app.FRQ[2]/2;app.FRQ[9]=app.FRQ[1];app.FRQ[0]=app.FRQ[1]/2;app.FRQ[10]=app.FRQ[0];};
+app.tuneINV=function(v){app.tuned=v;app.FRQ=[];app.FRQ[0]=v;app.FRQ[10]=app.FRQ[0];
+app.FRQ[1]=app.FRQ[0]/2;app.FRQ[9]=app.FRQ[1];
+app.FRQ[2]=app.FRQ[1]/2;app.FRQ[8]=app.FRQ[2];
+app.FRQ[3]=app.FRQ[2]/2;app.FRQ[7]=app.FRQ[3];
+app.FRQ[4]=app.FRQ[3]/2;app.FRQ[6]=app.FRQ[4];
+app.FRQ[5]=app.FRQ[4]/2;};
 app.start=function(){app.init();navigator.mediaDevices.getUserMedia({audio:false,video:true}).then(
 	function(stream){app.video.srcObject=stream;app.video.onloadedmetadata=function(e){app.video.play();};}).catch(
 	function(err){console.log(err.name + ": " + err.message);});setTimeout(app.startplay,500);};
 app.startv=function(v){app.init();var s=document.createElement('source');video.pause();s.setAttribute('src', v);video.appendChild(s);video.load();video.volume=0;video.play();setTimeout(app.startplay,1000);};
-app.startplay=function(){var now = acx.currentTime;app.vox=[]
+app.startplay=function(){var e=document.getElementById('starters');e.style.display='none';e.parentElement.removeChild(e.nextSibling);var now = acx.currentTime;app.vox=[]
 	for(var f=0;f<11;f++){app.vox[f]={};app.vox[f].g= acx.createGain();app.vox[f].g.connect(masterGain);
-		app.vox[f].o=acx.createOscillator();app.vox[f].o.type='sine';app.vox[f].o.start(now);app.vox[f].o.frequency.setValueAtTime(app.FRQ[f], now);app.vox[f].o.connect(app.vox[f].g);
+		app.vox[f].o=acx.createOscillator();app.vox[f].o.type=app.wf;app.vox[f].o.start(now);app.vox[f].o.frequency.setValueAtTime(app.FRQ[f], now);app.vox[f].o.connect(app.vox[f].g);
 		app.vox[f].g.gain.setValueAtTime(0, now);}
 	app.cycle=setInterval(app.frame,1000/app.fps);};
 app.frame=function(){app.context.drawImage(video, 0, 0, 15, 11);
@@ -22,26 +29,27 @@ app.frame=function(){app.context.drawImage(video, 0, 0, 15, 11);
 	var maxavgx=0;var minavgx=255;
 	for(var r=0;r<11;r++){rx=r*15*4;maxavg=0;minavg=255;
 		for(c=0;c<15;c++){cx=rx+(c*4);tmp=(dd[cx]+dd[cx+1]+dd[cx+2])/3;if(tmp>maxavg){maxavg=tmp;maxavgx=c};if(tmp<minavg){minavg=tmp;minavgx=c};}
-		if(app.invert){maxavg=255-minavg;maxavgx=minavgx;}
+		if(app.wb){maxavg=255-minavg;maxavgx=minavgx;}
 		tmp=Math.floor(Math.abs(maxavgx-7));
 		/*WESTERN SCALE START--- XX - 9/8 - 5/4 - 4/3 - 3/2 - 5/3 - 15/8 - 2/1*/
 		var h=app.FRQ[r]/2;
-		if(tmp==0){tmp=h*2}else if(tmp==1){tmp=(h/8)*15}else if(tmp==2){tmp=(h/3)*5}else if(tmp==3){tmp=(h/2)*3}else if(tmp==4){tmp=(h/3)*4}else if(tmp==5){tmp=(h/4)*5}else if(tmp==6){tmp=(h/8)*9}else if(tmp==7){tmp=h}
+		if(app.invert){
+			if(tmp==7){tmp=h*2}else if(tmp==6){tmp=(h/8)*15}else if(tmp==5){tmp=(h/3)*5}else if(tmp==4){tmp=(h/2)*3}else if(tmp==3){tmp=(h/3)*4}else if(tmp==2){tmp=(h/4)*5}else if(tmp==1){tmp=(h/8)*9}else if(tmp==0){tmp=h}}
+		else{if(tmp==0){tmp=h*2}else if(tmp==1){tmp=(h/8)*15}else if(tmp==2){tmp=(h/3)*5}else if(tmp==3){tmp=(h/2)*3}else if(tmp==4){tmp=(h/3)*4}else if(tmp==5){tmp=(h/4)*5}else if(tmp==6){tmp=(h/8)*9}else if(tmp==7){tmp=h}}
 		/*WESTERN SCALE END*/
 		if(maxavg<3){maxavg=0}else if(maxavg<200){maxavg=maxavg+((25/200)*maxavg)}var now = acx.currentTime;
 		app.vox[r].g.gain.linearRampToValueAtTime((maxavg/255)/2, now+((1000/(app.fps+5))/1000));
-		if(app.ramp){app.vox[r].o.frequency.linearRampToValueAtTime(tmp/2, now+((1000/(app.fps+1))/1000));}
-		else{app.vox[r].o.frequency.setValueAtTime(tmp/2, now);}
+		if(app.ramp){app.vox[r].o.frequency.linearRampToValueAtTime(tmp, now+((1000/(app.fps+1))/1000));}
+		else{app.vox[r].o.frequency.setValueAtTime(tmp, now);}
 }	};
 app.setfps=function(fps){app.fps=fps;if(app.cycle){clearInterval(app.cycle);app.cycle=setInterval(app.frame,1000/fps);}};
-app.setwave=function(v){for(var f=0;f<11;f++){app.vox[f].o.type=v;}};
-</script><style>html,body{width:100%;height:100%;margin:0;padding:0;text-align:center;overflow:hidden}button,input,select{font-size:36px}.toggled{background-color:#D00}
-td{height:2px;width:2px;border:1px solid grey}</style></head><body><div style="width:100%;text-align:center;position:absolute;z-index:1">
-<div style="display:inline-block"><button onclick="app.start();this.parentElement.style.display='none';">CAMERA</button> <button onclick="app.startv('moviex.mov');this.parentElement.style.display='none';">VIDEO1</button> <button onclick="app.startv('a.mp4');this.parentElement.style.display='none';return false;">VIDEO2</button> <button onclick="app.startv('b.mp4');this.parentElement.style.display='none';return false;">VIDEO3</button></div> <button onclick="document.location.reload()">RESET</button><br/>
-<input type="number" id="fps" value="5"  min="0" max="100" onchange="app.setfps(this.value)" style="display:none"/>
+app.setwave=function(v){app.wf=v;for(var f=0;f<11;f++){app.vox[f].o.type=v;}};
+</script><style>html,body{width:100%;height:100%;margin:0;padding:0;text-align:center;overflow:hidden;font:arial}span{padding:2px;margin-top:1px}button,input,select,span{font-size:36px;opacity:0.50;background-color:#cccccc;border-style:outset;}.toggled{background-color:#D00}
+td{height:2px;width:2px;border:1px solid grey}</style></head><body><div style="width:100%;text-align:center;position:absolute;z-index:1"><button onclick="document.location.reload()" style="position:absolute;left:0;top:0;">RESET</button>
+<div id="starters" style="display:inline-block"><button onclick="app.start();">CAMERA</button> <button onclick="app.startv('moviex.mov');">VIDEO1</button> <button onclick="app.startv('a.mp4');">VIDEO2</button> <button onclick="app.startv('b.mp4');">VIDEO3</button></div><br/>
 <select onchange="app.setwave(this.options[this.selectedIndex].value)">
 <option value="sine" selected="selected">SINE</option><option value="square">SQUARE</option><option value="sawtooth">SAWTOOTH</option><option value="triangle">TRIANGLE</option></select>
-<button onclick="var e=document.getElementById('fps');var v=e.value-1;if(v<0){v=0};e.value=v;app.setfps(v)">SLOWER</button> <button onclick="var e=document.getElementById('fps');var v=parseInt(e.value)+1;if(v>100){v=100};e.value=v;app.setfps(v);">FASTER</button> <button onclick="app.ramp=!app.ramp;this.classList.toggle('toggled')">RAMP</button> <button onclick="app.invert=!app.invert;this.classList.toggle('toggled')">BW/WB</button><br/>
+<button onclick="var e=document.getElementById('fps');var v=parseInt(e.innerHTML)-1;if(v<0){v=0};e.innerHTML=v;app.setfps(v)">SLOWER</button><span id="fps" class="toggled">5</span><button onclick="var e=document.getElementById('fps');var v=parseInt(e.innerHTML)+1;if(v>100){v=100};e.innerHTML=v;app.setfps(v);">FASTER</button> <button onclick="app.ramp=!app.ramp;this.classList.toggle('toggled')">RAMP</button> <button onclick="app.invert=!app.invert;app.tune(app.tuned);this.classList.toggle('toggled')">H/L</button> <button onclick="app.wb=!app.wb;this.classList.toggle('toggled')">BW/WB</button><br/>
 <button onclick="app.tune(4186);">C</button> <button onclick="app.tune(4434.913);">C#/Db</button> <button onclick="app.tune(4698.626);">D</button> <button onclick="app.tune(4978.021);">D#/Eb</button>
 <button onclick="app.tune(5274.030);">E</button> <button onclick="app.tune(5587.640);">F</button> <button onclick="app.tune(5919.898);">F#/Gb</button> <button onclick="app.tune(6271.913);">G</button>
 <button onclick="app.tune(6644.861);">G#Ab</button> <button onclick="app.tune(7039.985);">A</button> <button onclick="app.tune(7458.604);">A#/Bb</button> <button onclick="app.tune(7902.116);">B</button></div>
