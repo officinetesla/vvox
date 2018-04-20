@@ -1,5 +1,6 @@
 # vvox
-This application will control parameters for 16 oscilatore in webaudio.
+This application will control parameters for 16 oscilators in webaudio.
+
 There is a tiny little trick to it.
 
 The video feed gets resized to 16x11 so as to reduce it to a very finite amount of data.
