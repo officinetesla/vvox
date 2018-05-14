@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html><head><title>VVOX</title><script>
-var acx = new (typeof AudioContext !== "undefined" && AudioContext !== null ? AudioContext : webkitAudioContext);
-navigator.getUserMedia=navigator.getUserMedia||navigator.webkitGetUserMedia||navigator.mozGetUserMedia||navigator.msGetUserMedia;
-var masterGain = acx.createGain();var bufferSize = 4096;masterGain.gain.setValueAtTime(1,acx.currentTime + 1);masterGain.connect(acx.destination);
 window.app={ramp:false,invert:false,wb:false,wf:'sine',tuned:4186.01,fps:5};
-app.init=function(){app.video=document.querySelector('video');app.canvas=document.querySelector('#canvas');app.context=app.canvas.getContext('2d');
+app.init=function(){
+window.acx = new (typeof AudioContext !== "undefined" && AudioContext !== null ? AudioContext : webkitAudioContext);
+navigator.getUserMedia=navigator.getUserMedia||navigator.webkitGetUserMedia||navigator.mozGetUserMedia||navigator.msGetUserMedia;
+window.masterGain = acx.createGain();var bufferSize = 4096;masterGain.gain.setValueAtTime(1,acx.currentTime + 1);masterGain.connect(acx.destination);
+app.video=document.querySelector('video');app.canvas=document.querySelector('#canvas');app.context=app.canvas.getContext('2d');
 	app.tune(app.tuned);};
-app.tune=function(v,b){if(b){document.querySelector('.btuned').classList.remove('btuned');b.classList.add('btuned');}if(app.invert){app.tuneINV(v)}else{app.tuneSTR(v)}}
+app.tune=function(v,b){v=v/2;if(b){document.querySelector('.btuned').classList.remove('btuned');b.classList.add('btuned');}if(app.invert){app.tuneINV(v)}else{app.tuneSTR(v)}}
 app.tuneSTR=function(v){app.tuned=v;app.FRQ=[];app.FRQ[5]=v;app.FRQ[4]=app.FRQ[5]/2;app.FRQ[6]=app.FRQ[4];app.FRQ[3]=app.FRQ[4]/2;app.FRQ[7]=app.FRQ[3];app.FRQ[2]=app.FRQ[3]/2;app.FRQ[8]=app.FRQ[2];app.FRQ[1]=app.FRQ[2]/2;app.FRQ[9]=app.FRQ[1];app.FRQ[0]=app.FRQ[1]/2;app.FRQ[10]=app.FRQ[0];};
 app.tuneINV=function(v){app.tuned=v;app.FRQ=[];app.FRQ[0]=v;app.FRQ[10]=app.FRQ[0];
 app.FRQ[1]=app.FRQ[0]/2;app.FRQ[9]=app.FRQ[1];
@@ -14,7 +15,9 @@ app.FRQ[2]=app.FRQ[1]/2;app.FRQ[8]=app.FRQ[2];
 app.FRQ[3]=app.FRQ[2]/2;app.FRQ[7]=app.FRQ[3];
 app.FRQ[4]=app.FRQ[3]/2;app.FRQ[6]=app.FRQ[4];
 app.FRQ[5]=app.FRQ[4]/2;};
-app.start=function(){app.init();navigator.mediaDevices.getUserMedia({audio:false,video:true}).then(
+app.start=function(videoSource,num){app.init();var constraints={audio:false,video:{deviceId:videoSource}};
+	if(num=='2'){constraints.video.facingMode='environment';}
+	navigator.mediaDevices.getUserMedia(constraints).then(
 	function(stream){app.video.srcObject=stream;app.video.onloadedmetadata=function(e){app.video.play();};}).catch(
 	function(err){console.log(err.name + ": " + err.message);});setTimeout(app.startplay,50);};
 app.startv=function(v){app.init();var s=document.createElement('source');video.pause();s.setAttribute('src', v);video.appendChild(s);video.load();video.volume=0;video.play();setTimeout(app.startplay,1000);};
@@ -49,11 +52,23 @@ app.setall=function(wf,fps,ramp,cutoff,invert,url){app.fps=fps;e=document.getEle
 	app.invert=invert;var e=document.getElementById('binvert');if(app.invert){e.classList.add('toggled')}else{e.classList.remove('toggled')}
 	app.cutoff=cutoff;e=document.getElementById('cutoff');e.innerHTML=cutoff;
 	app.wf=wf;e=document.getElementById('bwf');app.wf=wf;for(var x=0;x<e.options.length;x++){if(e.options[x].value==wf){e.selectedIndex=x}}
-if(url){app.startv(url);}else{app.start();}document.getElementById('panel').style.display='';}
+if(url){app.startv(url);}document.getElementById('panel').style.display='';}
+app.gotDevices=function(deviceInfos){var starters=document.getElementById('starters');var x=0;for(var i = 0; i < deviceInfos.length; ++i) {
+   if (deviceInfos[i].kind === 'videoinput') {var butt=document.createElement('button');x=x+1;
+	butt.setAttribute('value',x+'^'+deviceInfos[i].deviceId);butt.setAttribute('onclick','app.cambutton(this)');
+	butt.innerHTML=deviceInfos[i].label || 'camera ' + (deviceInfos[i].deviceId + 1);
+    starters.insertBefore(butt,starters.firtChild);}
+}};app.handleError=function(error){console.log('navigator.getUserMedia error: ', error);};
+app.onload=function(){navigator.mediaDevices.enumerateDevices().then(app.gotDevices).catch(app.handleError);};
+app.cambutton=function(elm){if(location.protocol!='https:'){alert('...haaa security, you must use https to use camera!');}else{
+	var v=elm.value.split('^');
+	app.setall('sine',5,false,180)}
+	app.start(v[1],v[0]);
+};
 </script><style>html,body{width:100%;height:100%;margin:0;padding:0;text-align:center;overflow:hidden;font:arial}span{padding:2px;margin-top:1px}button,input,select,span{font-size:34px;opacity:0.50;background-color:#cccccc;border-style:outset;}.toggled{background-color:#D00}.btuned{background-color:#D00}
-td{height:2px;width:2px;border:1px solid grey}</style></head><body><br/><button onclick="document.location.reload()" style="position:absolute;z-index:2;bottom:20px;width:33%;left:33%">RESET</button><div style="width:100%;text-align:center;position:absolute;z-index:1">
-<div id="starters" style="display:inline-block;margin-top:20%"><button onclick="if(location.protocol!='https:'){alert('...haaa security, you must use https to use camera!');}else{app.setall('sine',5,false,180)}">CAMERA</button>
-<button onclick="app.setall('sine',2,true,100,false,'moviex.mov');">VIDEO1</button>
+td{height:2px;width:2px;border:1px solid grey}</style></head><body onload="app.onload()"><br/><button onclick="document.location.reload()" style="position:absolute;z-index:2;bottom:20px;width:33%;left:33%">RESET</button><div style="width:100%;text-align:center;position:absolute;z-index:1">
+<div id="starters" style="display:inline-block;margin-top:20%"><button
+onclick="app.setall('sine',2,true,100,false,'moviex.mov');">VIDEO1</button>
 <button onclick="app.setall('triangle',16,false,80,true,'a.mp4');">VIDEO2</button>
 <button onclick="app.setall('sawtooth',20,false,135,false,'b.mp4');">VIDEO3</button>
 <button onclick="app.setall('square',20,true,50,false,'d.mp4');">VIDEO4</button></div><br/>
@@ -65,6 +80,6 @@ td{height:2px;width:2px;border:1px solid grey}</style></head><body><br/><button 
 <button onclick="app.tune(4186,this);" class="btuned">C</button> <button onclick="app.tune(4434.913,this);">C#/Db</button> <button onclick="app.tune(4698.626,this);">D</button> <button onclick="app.tune(4978.021,this);">D#/Eb</button>
 <button onclick="app.tune(5274.030,this);">E</button> <button onclick="app.tune(5587.640,this);">F</button> <button onclick="app.tune(5919.898,this);">F#/Gb</button> <button onclick="app.tune(6271.913,this);">G</button>
 <button onclick="app.tune(6644.861,this);">G#Ab</button> <button onclick="app.tune(7039.985,this);">A</button> <button onclick="app.tune(7458.604,this);">A#/Bb</button> <button onclick="app.tune(7902.116,this);">B</button></div></div></div>
-<video id="video" style="width:100%;position:absolute;z-index:0;top:0;left:0;"></video><br/><canvas
+<video id="video" style="width:100%;position:absolute;z-index:0;top:0;left:0;" playsInline="true"></video><br/><canvas
 	id="canvas" width="15" height="11" style="display:none"></canvas>
 </body></html>
